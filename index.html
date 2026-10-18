@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f6feb">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<title>Resume Builder</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--ink:#1c2128;--muted:#6b7380;--accent:#1f6feb;--line:#d8dce2}
+@media (prefers-color-scheme:dark){:root{--bg:#12151a;--card:#1b1f26;--ink:#e6e8eb;--muted:#99a1ad;--line:#2f3540}}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink);padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+header{padding:14px 16px;font-weight:700;font-size:18px}
+.tabs{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:10}
+.tabs button{flex:1;padding:14px 4px;border:0;background:none;color:var(--muted);font-size:15px;font-weight:600}
+.tabs button.on{color:var(--accent);box-shadow:inset 0 3px 0 var(--accent)}
+main{padding:0 12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.card h2{margin:0 0 10px;font-size:16px}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+input,textarea,select{width:100%;font:inherit;font-size:16px;padding:11px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+textarea{min-height:90px;resize:vertical}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.item{border:1px dashed var(--line);border-radius:10px;padding:10px;margin-top:10px}
+button.btn{padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:15px;font-weight:600}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.danger{color:#d1242f}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.hide{display:none}
+/* ---------- Resume sheet ---------- */
+.stage{overflow:auto;padding-bottom:12px}
+#sheet{background:#fff;color:#111;width:794px;min-height:1123px;padding:48px 54px;margin:0 auto;font-size:13.5px;line-height:1.45;transform-origin:top left}
+#sheet h1{margin:0;font-size:30px;line-height:1.1}
+#sheet .sub{color:#555;margin-top:4px}
+#sheet h3{margin:20px 0 6px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;border-bottom:1.5px solid #111;padding-bottom:3px}
+#sheet .e{margin-bottom:10px}
+#sheet .eh{display:flex;justify-content:space-between;gap:12px;font-weight:700}
+#sheet .eh span:last-child{font-weight:400;color:#555;white-space:nowrap}
+#sheet .es{color:#444}
+#sheet ul{margin:4px 0 0 18px;padding:0}
+#sheet p{margin:4px 0}
+/* templates */
+#sheet.classic{font-family:Georgia,'Times New Roman',serif}
+#sheet.classic h1,#sheet.classic .head{text-align:center}
+#sheet.modern h3{color:var(--tc,#1f6feb);border-color:var(--tc,#1f6feb)}
+#sheet.modern h1{color:var(--tc,#1f6feb)}
+#sheet.compact{font-size:12px;padding:36px 42px}
+#sheet.compact h1{font-size:24px}
+#sheet.compact h3{margin-top:12px}
+@media print{
+  @page{size:A4;margin:0}
+  body{background:#fff;padding:0}
+  header,.tabs,main>section:not(#pv),.pvbar,.noprint{display:none!important}
+  main{padding:0}.stage{overflow:visible;padding:0}
+  #sheet{transform:none!important;width:210mm;min-height:297mm;margin:0;box-shadow:none}
+}
+</style>
+</head>
+<body>
+<header>Resume Builder</header>
+<main>
+  <section id="ed">
+    <div class="card"><h2>Basics</h2>
+      <label>Full name</label><input id="name" autocomplete="name">
+      <label>Job title</label><input id="title">
+      <div class="row">
+        <div><label>Email</label><input id="email" type="email" autocomplete="email"></div>
+        <div><label>Phone</label><input id="phone" type="tel" autocomplete="tel"></div>
+      </div>
+      <label>Location</label><input id="loc">
+      <label>Link (LinkedIn / portfolio)</label><input id="link">
+      <label>Summary</label><textarea id="summary"></textarea>
+    </div>
+    <div class="card"><h2>Experience</h2><div id="exp"></div>
+      <div class="actions"><button class="btn" data-add="exp">+ Add job</button></div></div>
+    <div class="card"><h2>Education</h2><div id="edu"></div>
+      <div class="actions"><button class="btn" data-add="edu">+ Add education</button></div></div>
+    <div class="card"><h2>Skills</h2>
+      <label>Separate with commas</label><textarea id="skills"></textarea></div>
+    <div class="card"><h2>Certifications / extras</h2>
+      <label>One per line</label><textarea id="extras"></textarea></div>
+  </section>
+
+  <section id="pv" class="hide">
+    <div class="card noprint"><h2>Style</h2>
+      <div class="row">
+        <div><label>Template</label><select id="tpl"><option value="classic">Classic</option><option value="modern">Modern</option><option value="compact">Compact</option></select></div>
+        <div><label>Accent colour</label><input id="tc" type="color" value="#1f6feb"></div>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="pdf">Save as PDF</button>
+        <button class="btn" id="exp-json">Backup</button>
+        <button class="btn" id="imp-json">Restore</button>
+        <button class="btn danger" id="reset">Clear all</button>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin:10px 0 0">PDF: in the print screen, choose "Save as PDF" as the printer. Data stays on this device.</p>
+      <input id="file" type="file" accept="application/json" class="hide">
+    </div>
+    <div class="stage" id="stage"><div id="sheet" class="classic"></div></div>
+  </section>
+</main>
+<nav class="tabs">
+  <button class="on" data-tab="ed">Edit</button>
+  <button data-tab="pv">Preview</button>
+</nav>
+
+<script>
+const KEY='resume-builder-v1';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const blank=()=>({name:'',title:'',email:'',phone:'',loc:'',link:'',summary:'',skills:'',extras:'',tpl:'classic',tc:'#1f6feb',exp:[],edu:[]});
+let S=blank();
+
+function load(){try{const r=localStorage.getItem(KEY);if(r)S={...blank(),...JSON.parse(r)}}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+
+const SIMPLE=['name','title','email','phone','loc','link','summary','skills','extras'];
+const FIELDS={
+  exp:[['role','Role'],['org','Company'],['start','Start'],['end','End'],['desc','What you did (one bullet per line)',true]],
+  edu:[['role','Degree / course'],['org','School'],['start','Start'],['end','End'],['desc','Notes (optional)',true]]
+};
+
+function renderList(kind){
+  const box=$(kind);box.innerHTML='';
+  S[kind].forEach((it,i)=>{
+    const d=document.createElement('div');d.className='item';
+    let h='';
+    FIELDS[kind].forEach(([k,lab,area])=>{
+      h+=`<label>${lab}</label>`+(area?`<textarea data-k="${k}">${esc(it[k])}</textarea>`:`<input data-k="${k}" value="${esc(it[k])}">`);
+    });
+    h+=`<div class="actions"><button class="btn" data-mv="-1">↑</button><button class="btn" data-mv="1">↓</button><button class="btn danger" data-del="1">Remove</button></div>`;
+    d.innerHTML=h;
+    d.addEventListener('input',e=>{const k=e.target.dataset.k;if(k){it[k]=e.target.value;save();draw()}});
+    d.addEventListener('click',e=>{
+      const t=e.target;
+      if(t.dataset.del){S[kind].splice(i,1);renderList(kind);save();draw()}
+      if(t.dataset.mv){const j=i+Number(t.dataset.mv);if(j>=0&&j<S[kind].length){[S[kind][i],S[kind][j]]=[S[kind][j],S[kind][i]];renderList(kind);save();draw()}}
+    });
+    box.appendChild(d);
+  });
+}
+
+function entries(list){
+  return list.filter(x=>x.role||x.org).map(x=>{
+    const dates=[x.start,x.end].filter(Boolean).join(' – ');
+    const lines=(x.desc||'').split('\n').map(s=>s.trim()).filter(Boolean);
+    const body=lines.length>1?`<ul>${lines.map(l=>`<li>${esc(l)}</li>`).join('')}</ul>`:(lines[0]?`<p>${esc(lines[0])}</p>`:'');
+    return `<div class="e"><div class="eh"><span>${esc(x.role)}</span><span>${esc(dates)}</span></div><div class="es">${esc(x.org)}</div>${body}</div>`;
+  }).join('');
+}
+
+function draw(){
+  const sh=$('sheet');
+  sh.className=S.tpl;sh.style.setProperty('--tc',S.tc);
+  const contact=[S.email,S.phone,S.loc,S.link].filter(Boolean).map(esc).join(' · ');
+  const skills=S.skills.split(',').map(s=>s.trim()).filter(Boolean);
+  const extras=S.extras.split('\n').map(s=>s.trim()).filter(Boolean);
+  let h=`<div class="head"><h1>${esc(S.name)||'Your Name'}</h1>`;
+  if(S.title)h+=`<div class="sub">${esc(S.title)}</div>`;
+  if(contact)h+=`<div class="sub">${contact}</div>`;
+  h+='</div>';
+  if(S.summary.trim())h+=`<h3>Summary</h3><p>${esc(S.summary).replace(/\n/g,'<br>')}</p>`;
+  const ex=entries(S.exp);if(ex)h+=`<h3>Experience</h3>${ex}`;
+  const ed=entries(S.edu);if(ed)h+=`<h3>Education</h3>${ed}`;
+  if(skills.length)h+=`<h3>Skills</h3><p>${skills.map(esc).join(' · ')}</p>`;
+  if(extras.length)h+=`<h3>Certifications &amp; extras</h3><ul>${extras.map(l=>`<li>${esc(l)}</li>`).join('')}</ul>`;
+  sh.innerHTML=h;
+  fit();
+}
+
+/* scale the A4 sheet to the phone width for preview */
+function fit(){
+  const st=$('stage'),sh=$('sheet');
+  if($('pv').classList.contains('hide'))return;
+  const avail=st.clientWidth;
+  const sc=Math.min(1,avail/794);
+  sh.style.transform=`scale(${sc})`;
+  sh.style.marginBottom=`${-(sh.offsetHeight*(1-sc))}px`;
+  sh.style.marginLeft='0';
+}
+
+function fillForm(){
+  SIMPLE.forEach(k=>$(k).value=S[k]);
+  $('tpl').value=S.tpl;$('tc').value=S.tc;
+  renderList('exp');renderList('edu');
+}
+
+SIMPLE.forEach(k=>$(k).addEventListener('input',e=>{S[k]=e.target.value;save();draw()}));
+$('tpl').addEventListener('change',e=>{S.tpl=e.target.value;save();draw()});
+$('tc').addEventListener('input',e=>{S.tc=e.target.value;save();draw()});
+document.querySelectorAll('[data-add]').forEach(b=>b.addEventListener('click',()=>{
+  const k=b.dataset.add;S[k].push({role:'',org:'',start:'',end:'',desc:''});renderList(k);save();draw();
+  const last=$(k).lastElementChild;if(last)last.querySelector('input').focus();
+}));
+document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('on',x===b));
+  $('ed').classList.toggle('hide',b.dataset.tab!=='ed');
+  $('pv').classList.toggle('hide',b.dataset.tab!=='pv');
+  window.scrollTo(0,0);draw();
+}));
+$('pdf').addEventListener('click',()=>{
+  const t=document.title;document.title=(S.name||'Resume').replace(/\s+/g,'_')+'_Resume';
+  window.print();setTimeout(()=>document.title=t,1000);
+});
+$('exp-json').addEventListener('click',()=>{
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,2)],{type:'application/json'}));
+  a.download='resume-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+});
+$('imp-json').addEventListener('click',()=>$('file').click());
+$('file').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{try{S={...blank(),...JSON.parse(r.result)};save();fillForm();draw()}catch(x){alert('That file is not a valid backup.')}};
+  r.readAsText(f);e.target.value='';
+});
+$('reset').addEventListener('click',()=>{
+  if(confirm('Delete everything on this device? Make a backup first if unsure.')){S=blank();save();fillForm();draw()}
+});
+window.addEventListener('resize',fit);
+window.addEventListener('beforeprint',()=>{$('sheet').style.transform='none'});
+window.addEventListener('afterprint',fit);
+
+load();fillForm();draw();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
